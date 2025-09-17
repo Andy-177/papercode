@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaperCode</title>
+    <!-- 引入Font Awesome图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            position: relative; /* 为按钮定位 */
+        }
+
+
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+
+        #position-indicator {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 14px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+
+        #pointer {
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 15px solid #00BBD4;
+            margin-bottom: 5px;
+            position: relative;
+            left: 0;
+            cursor: pointer; /* 指针可点击 */
+            transition: transform 0.2s ease;
+        }
+
+
+        #pointer:hover {
+            transform: scale(1.1); /* 悬停效果 */
+        }
+
+
+        #tape-container {
+            width: 315px; /* 9 cells * 35px = 315px */
+            height: 35px;
+            overflow: hidden;
+            border: 1px solid #000;
+            position: relative;
+        }
+
+
+        #tape {
+            display: flex;
+            position: absolute;
+            transition: left 0.3s ease;
+        }
+
+
+        .cell {
+            width: 35px;
+            height: 35px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            background-color: white;
+            flex-shrink: 0;
+            transition: background-color 0.2s ease;
+        }
+
+
+        .cell.highlighted {
+            background-color: #e6f7ff; /* 淡天蓝色高亮 */
+        }
+
+
+        .cell.hole {
+            background-color: black; /* 打孔后变黑 */
+        }
+
+
+        .cell.starting {
+            background-color: #ff0000; /* 红色起始格子 */
+            cursor: not-allowed;
+        }
+
+
+        .cell.truncated {
+            background-color: #ffd700; /* 截断处为金色/黄色 */
+        }
+
+
+        .cell.truncated-behind {
+            background-color: #cccccc; /* 截断后面的格子为灰色 */
+        }
+
+
+        #controls {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+
+        .triangle {
+            width: 0;
+            height: 0;
+            cursor: pointer;
+            margin: 0 15px;
+        }
+
+
+        #left-triangle {
+            border-top: 12px solid transparent;
+            border-bottom: 12px solid transparent;
+            border-right: 18px solid #00BBD4;
+        }
+
+
+        #right-triangle {
+            border-top: 12px solid transparent;
+            border-bottom: 12px solid transparent;
+            border-left: 18px solid #00BBD4;
+            opacity: 0.5;
+        }
+
+
+        #punch-button {
+            width: 30px;
+            height: 30px;
+            background-color: #00BBD4;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+
+        #punch-button:hover {
+            background-color: #0099cc;
+        }
+
+
+        /* 按钮样式 */
+        .control-button {
+            position: absolute;
+            right: 20px;
+            width: 60px; /* 固定宽度，使两个按钮宽度一致 */
+            padding: 8px 0; /* 调整内边距，去除左右内边距 */
+            text-align: center; /* 文字居中 */
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+
+        .control-button:hover {
+            background-color: #555;
+        }
+
+
+        #code-button {
+            top: 20px;
+        }
+
+
+        #bin-button {
+            top: 55px; /* 位于Code按钮下方 */
+        }
+
+
+        /* 左上角紫色拼图按钮 */
+        #puzzle-button {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            width: 40px;
+            height: 40px;
+            background-color: #9c27b0; /* 紫色 */
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+            z-index: 100;
+        }
+
+
+        #puzzle-button:hover {
+            background-color: #7b1fa2; /* 深一点的紫色 */
+            transform: scale(1.1); /* 悬停时略微放大 */
+        }
+
+
+        /* 查看器样式 */
+        .viewer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+
+        .viewer-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 90%;
+            max-height: 80%;
+            overflow: auto;
+        }
+
+        /* 插件管理界面加宽和紫色主题 */
+        #plugin-viewer .viewer-content {
+            max-width: 800px; /* 增加插件管理界面的最大宽度 */
+            width: 100%; /* 确保在小屏幕上能自适应 */
+            position: relative; /* 为内部按钮定位 */
+            border-top: 5px solid #9c27b0; /* 紫色顶部边框 */
+        }
+
+        #plugin-viewer h3 {
+            color: #9c27b0; /* 紫色标题 */
+            border-bottom: 1px solid #f0e6f0;
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+
+        .close-button {
+            margin-top: 20px;
+            padding: 8px 16px;
+            background-color: #00BBD4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* 插件查看器的关闭按钮使用紫色 */
+        #plugin-viewer .close-button {
+            background-color: #9c27b0;
+        }
+
+        #plugin-viewer .close-button:hover {
+            background-color: #7b1fa2;
+        }
+
+
+        #full-tape {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2px;
+        }
+
+
+        .code-cell {
+            width: 20px;
+            height: 20px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            cursor: pointer; /* 显示指针光标，表示可点击 */
+            transition: transform 0.1s ease;
+        }
+
+
+        .code-cell:hover {
+            transform: scale(1.2); /* 悬停时轻微放大，增强交互感 */
+        }
+
+
+        /* 二进制显示样式 */
+        #binary-content {
+            font-family: monospace;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            font-size: 16px;
+            letter-spacing: 1px; /* 略微增加字符间距，提高可读性 */
+            word-break: break-all; /* 长串二进制自动换行 */
+        }
+
+        /* 插件系统样式 - 紫色主题 */
+        #plugin-viewer {
+            z-index: 1001;
+        }
+
+        #plugin-list {
+            margin-bottom: 20px;
+            border-top: 1px solid #f0e6f0; /* 淡紫色调边框 */
+            padding-top: 10px;
+            min-height: 100px; /* 确保即使没有插件也有一定高度 */
+        }
+
+        .plugin-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #e0c8e0; /* 淡紫色边框 */
+            border-radius: 4px;
+            background-color: #fcfaff; /* 极淡紫色背景 */
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        .plugin-item:hover {
+            background-color: #f5edf5; /* 淡紫色背景 */
+            border-color: #c9a3c9; /* 深一点的紫色边框 */
+        }
+
+        .plugin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .plugin-name {
+            font-weight: bold;
+            color: #7b1fa2; /* 深紫色名称 */
+        }
+
+        .plugin-packname {
+            font-size: 0.8em;
+            color: #9c27b0; /* 紫色包名 */
+        }
+
+        .plugin-description {
+            margin-top: 5px;
+            font-size: 0.9em;
+            color: #5a266a; /* 紫色调描述 */
+        }
+
+        .plugin-details {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #e0c8e0; /* 淡紫色虚线 */
+            font-size: 0.85em;
+            display: none;
+        }
+
+        .plugin-details.visible {
+            display: block;
+        }
+
+        .plugin-section {
+            margin-bottom: 8px;
+        }
+
+        .plugin-section-title {
+            font-weight: bold;
+            color: #7b1fa2; /* 深紫色标题 */
+            margin-bottom: 3px;
+        }
+
+        .plugin-section-content {
+            color: #6a327a; /* 紫色内容 */
+            padding-left: 10px;
+        }
+
+        /* 加号按钮：圆角正方形紫色 */
+        #add-plugin-button {
+            width: 40px;
+            height: 40px;
+            background-color: #9c27b0; /* 紫色，与拼图按钮一致 */
+            color: white;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute; /* 绝对定位 */
+            top: 20px;
+            right: 20px;
+            border-radius: 6px; /* 圆角正方形 */
+            transition: background-color 0.2s, transform 0.2s;
+        }
+
+        #add-plugin-button:hover {
+            background-color: #7b1fa2; /* 深一点的紫色 */
+            transform: scale(1.1); /* 悬停时略微放大 */
+        }
+
+        #add-plugin-form {
+            display: none;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #f0e6f0; /* 淡紫色边框 */
+        }
+
+        #add-plugin-form.visible {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #7b1fa2; /* 紫色标签 */
+        }
+
+        textarea, input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #e0c8e0; /* 淡紫色边框 */
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        textarea:focus, input[type="file"]:focus {
+            border-color: #9c27b0; /* 聚焦时显示紫色边框 */
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(156, 39, 176, 0.2); /* 紫色焦点阴影 */
+        }
+
+        textarea {
+            min-height: 150px;
+            font-family: monospace;
+        }
+
+        .form-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .form-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .submit-button {
+            background-color: #9c27b0; /* 紫色提交按钮 */
+            color: white;
+        }
+
+        .submit-button:hover {
+            background-color: #7b1fa2; /* 深紫色 */
+        }
+
+        .cancel-button {
+            background-color: #f0e6f0; /* 淡紫色取消按钮 */
+            color: #7b1fa2; /* 紫色文字 */
+        }
+
+        .cancel-button:hover {
+            background-color: #e0c8e0; /* 深一点的淡紫色 */
+        }
+
+        .error-message {
+            color: #d32f2f;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+
+        .plugin-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .plugin-action-button {
+            padding: 3px 8px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+
+        .delete-button {
+            background-color: #ff4444;
+            color: white;
+        }
+
+        .delete-button:hover {
+            background-color: #cc0000;
+        }
+
+        .install-methods {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .install-method {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            border: 1px solid #e0c8e0; /* 淡紫色边框 */
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .install-method:hover {
+            background-color: #f5edf5; /* 淡紫色背景 */
+        }
+
+        .install-method.active {
+            border-color: #9c27b0; /* 紫色边框 */
+            background-color: #f0e6f0; /* 淡紫色背景 */
+            color: #7b1fa2; /* 紫色文字 */
+        }
+
+        .install-content {
+            display: none;
+        }
+
+        .install-content.active {
+            display: block;
+        }
+
+        #no-plugins-message {
+            text-align: center;
+            color: #9c27b0; /* 紫色提示文字 */
+            padding: 20px;
+            font-style: italic;
+            font-size: 0.9em;
+            margin: 0;
+        }
+
+        /* 查看源代码按钮样式 */
+        .view-source-button {
+            background-color: #9c27b0; /* 紫色按钮 */
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85em;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+            width: 100%;
+            text-align: center;
+        }
+
+        .view-source-button:hover {
+            background-color: #7b1fa2; /* 深紫色 */
+        }
+
+        /* 源代码显示区域样式 */
+        .plugin-source-code {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f8f8;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.8em;
+            line-height: 1.4;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            display: none;
+            border: 1px solid #e0c8e0;
+        }
+
+        .plugin-source-code.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- 左上角紫色拼图按钮 -->
+    <button id="puzzle-button" title="插件管理">
+        <i class="fas fa-puzzle-piece"></i>
+    </button>
+
+
+    <!-- 右侧控制按钮 -->
+    <button id="code-button" class="control-button" onclick="toggleCodeViewer()">Code</button>
+    <button id="bin-button" class="control-button" onclick="toggleBinaryViewer()">Bin</button>
+
+
+    <div id="game-container">
+        <div id="position-indicator">1</div>
+        <div id="pointer" onclick="toggleTruncate()"></div>
+        <div id="tape-container">
+            <div id="tape"></div>
+        </div>
+        <div id="controls">
+            <div id="left-triangle" class="triangle" onclick="moveTape('left')"></div>
+            <div id="punch-button" onclick="toggleHole()"></div>
+            <div id="right-triangle" class="triangle" onclick="moveTape('right')"></div>
+        </div>
+    </div>
+
+
+    <!-- 代码查看器 -->
+    <div id="code-viewer" class="viewer">
+        <div class="viewer-content">
+            <h3>完整纸带内容</h3>
+            <div id="full-tape"></div>
+            <p style="font-size: 14px; color: #666; margin-top: 10px;">点击任意格子可跳转到对应位置</p>
+        </div>
+        <button class="close-button" onclick="toggleCodeViewer()">关闭</button>
+    </div>
+
+
+    <!-- 二进制查看器 -->
+    <div id="binary-viewer" class="viewer">
+        <div class="viewer-content">
+            <h3>纸带二进制表示</h3>
+            <p style="font-size: 14px; color: #666; margin-bottom: 15px;">黑色 = 1，白色 = 0（忽略红色起始格子）</p>
+            <div id="binary-content"></div>
+        </div>
+        <button class="close-button" onclick="toggleBinaryViewer()">关闭</button>
+    </div>
+
+    <!-- 插件查看器 -->
+    <div id="plugin-viewer" class="viewer">
+        <div class="viewer-content">
+            <h3>插件管理</h3>
+            
+            <!-- 带加号的紫色圆角正方形按钮，位于右上角 -->
+            <button id="add-plugin-button">+</button>
+            
+            <!-- 插件安装表单，默认隐藏 -->
+            <div id="add-plugin-form">
+                <div class="install-methods">
+                    <div class="install-method active" data-method="text">输入代码</div>
+                    <div class="install-method" data-method="file">上传文件</div>
+                </div>
+                
+                <div class="install-contents">
+                    <div class="install-content active" id="text-install">
+                        <div class="form-group">
+                            <label for="plugin-code">插件代码</label>
+                            <textarea id="plugin-code" placeholder="粘贴插件代码..." style="resize: none"></textarea>
+                            <div id="plugin-code-error" class="error-message"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="install-content" id="file-install">
+                        <div class="form-group">
+                            <label for="plugin-file">选择JS文件</label>
+                            <input type="file" id="plugin-file" accept=".js">
+                            <div id="plugin-file-error" class="error-message"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-buttons">
+                    <button class="form-button cancel-button" id="cancel-add-plugin">取消</button>
+                    <button class="form-button submit-button" id="install-plugin">安装</button>
+                </div>
+            </div>
+            
+            <!-- 插件列表区域 -->
+            <p id="no-plugins-message">暂无安装的插件</p>
+            <div id="plugin-list"></div>
+        </div>
+        <button class="close-button" onclick="togglePluginViewer()">关闭</button>
+    </div>
+
+
+    <script>
+        // 纸带系统核心逻辑
+        const CELL_WIDTH = 35;
+        const VISIBLE_CELLS = 9;
+        const TARGET_CELL_INDEX = 4; // 第五个格子的索引(0开始)
+        const INITIAL_CELLS = 13;
+        const STARTING_CELLS_COUNT = 4;
+        const tape = document.getElementById('tape');
+        let cells = [];
+        let tapeOffset;
+        let currentVisibleCells = [];
+        let truncateIndex = -1; // 记录截断位置，-1表示没有截断
+        let shortcutsEnabled = true; // 控制快捷键是否启用的标志
+
+        // 插件系统核心变量
+        let plugins = [];
+
+
+        /**
+         * 获取纸带的二进制信息
+         * @param {boolean} [includeMetadata=false] - 是否包含元数据（如长度、截断位置等）
+         * @returns {string|Object} - 如果includeMetadata为false，返回二进制字符串；否则返回包含详细信息的对象
+         */
+        function getTapeBinary(includeMetadata = false) {
+            let binaryString = '';
+            let length = 0;
+            
+            // 遍历所有格子，构建二进制字符串
+            cells.forEach((cell, index) => {
+                // 跳过红色起始格子
+                if (cell.classList.contains('starting')) {
+                    return;
+                }
+                
+                // 跳过截断位置及后面的格子
+                if (truncateIndex !== -1 && index >= truncateIndex) {
+                    return;
+                }
+                
+                // 跳过截断标记格子本身
+                if (cell.classList.contains('truncated')) {
+                    return;
+                }
+                
+                // 黑色(打孔)为1，白色(未打孔)为0
+                binaryString += cell.classList.contains('hole') ? '1' : '0';
+                length++;
+            });
+            
+            // 根据参数决定返回格式
+            if (includeMetadata) {
+                return {
+                    binary: binaryString,
+                    length: length,
+                    hasTruncation: truncateIndex !== -1,
+                    truncatePosition: truncateIndex !== -1 ? getEffectivePosition(truncateIndex) : null,
+                    timestamp: new Date().toISOString()
+                };
+            } else {
+                return binaryString;
+            }
+        }
+
+
+        function createCell(isStartingCell = false) {
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            if (isStartingCell) {
+                cell.classList.add('starting');
+            }
+            return cell;
+        }
+
+
+        function initializeTape() {
+            for (let i = 0; i < INITIAL_CELLS; i++) {
+                const isStartingCell = i < STARTING_CELLS_COUNT;
+                const cell = createCell(isStartingCell);
+                tape.appendChild(cell);
+                cells.push(cell);
+            }
+            
+            tapeOffset = -(STARTING_CELLS_COUNT - TARGET_CELL_INDEX) * CELL_WIDTH;
+            tape.style.left = `${tapeOffset}px`;
+            
+            updateVisibleCells();
+            highlightTargetCell();
+            updateControlStates();
+            updatePositionIndicator(); // 初始化位置指示器
+            updateCodeViewer(); // 初始化代码查看器
+            updateBinaryViewer(); // 初始化二进制查看器
+        }
+
+
+        function updateVisibleCells() {
+            const startIndex = Math.max(0, Math.floor(-tapeOffset / CELL_WIDTH));
+            currentVisibleCells = cells.slice(startIndex, startIndex + VISIBLE_CELLS);
+        }
+
+
+        function highlightTargetCell() {
+            cells.forEach(cell => cell.classList.remove('highlighted'));
+            
+            if (currentVisibleCells[TARGET_CELL_INDEX]) {
+                const targetCell = currentVisibleCells[TARGET_CELL_INDEX];
+                // 如果不是起始格子、不是打孔格子、不是截断格子，则高亮
+                if (!targetCell.classList.contains('starting') && 
+                    !targetCell.classList.contains('hole') &&
+                    !targetCell.classList.contains('truncated')) {
+                    targetCell.classList.add('highlighted');
+                }
+            }
+        }
+
+
+        // 更新指针上方的位置指示器
+        function updatePositionIndicator() {
+            const positionIndicator = document.getElementById('position-indicator');
+            const startIndex = Math.max(0, Math.floor(-tapeOffset / CELL_WIDTH));
+            const targetCellIndex = startIndex + TARGET_CELL_INDEX;
+            
+            // 计算有效位置（忽略红色格子）
+            let effectivePosition = 0;
+            for (let i = 0; i < cells.length; i++) {
+                // 遇到当前目标格子时停止计数
+                if (i === targetCellIndex) {
+                    // 如果当前格子是红色起始格子，显示"--"
+                    if (cells[i].classList.contains('starting')) {
+                        positionIndicator.textContent = "--";
+                    } else {
+                        positionIndicator.textContent = effectivePosition + 1;
+                    }
+                    break;
+                }
+                
+                // 只对非红色格子计数
+                if (!cells[i].classList.contains('starting')) {
+                    effectivePosition++;
+                }
+            }
+        }
+
+
+        function updateControlStates() {
+            const firstVisibleIndex = Math.max(0, Math.floor(-tapeOffset / CELL_WIDTH));
+            const rightTriangle = document.getElementById('right-triangle');
+            const leftTriangle = document.getElementById('left-triangle');
+            
+            // 检查是否有截断，如果有则限制向右移动不能超过截断位置
+            const targetCellIndex = firstVisibleIndex + TARGET_CELL_INDEX;
+            if (truncateIndex !== -1 && targetCellIndex >= truncateIndex) {
+                rightTriangle.style.opacity = 0.5;
+            } else {
+                rightTriangle.style.opacity = 1;
+            }
+            
+            // 左按钮状态：只有在最左侧时才禁用
+            leftTriangle.style.opacity = firstVisibleIndex === 0 ? 0.5 : 1;
+            
+            const punchButton = document.getElementById('punch-button');
+            if (currentVisibleCells[TARGET_CELL_INDEX] && 
+                (currentVisibleCells[TARGET_CELL_INDEX].classList.contains('starting') ||
+                 currentVisibleCells[TARGET_CELL_INDEX].classList.contains('truncated'))) {
+                punchButton.style.opacity = 0.5;
+                punchButton.style.cursor = 'not-allowed';
+            } else {
+                punchButton.style.opacity = 1;
+                punchButton.style.cursor = 'pointer';
+            }
+        }
+
+
+        function expandTape(direction) {
+            if (direction === 'right' && (truncateIndex === -1 || cells.length < truncateIndex)) {
+                const newCell = createCell();
+                tape.appendChild(newCell);
+                cells.push(newCell);
+                // 如果已有截断，新添加的格子应该显示为灰色
+                if (truncateIndex !== -1 && cells.length > truncateIndex) {
+                    newCell.classList.add('truncated-behind');
+                }
+                updateCodeViewer(); // 更新代码查看器
+                updateBinaryViewer(); // 更新二进制查看器
+            }
+        }
+
+
+        function moveTape(direction) {
+            const firstVisibleIndex = Math.max(0, Math.floor(-tapeOffset / CELL_WIDTH));
+            const targetCellIndex = firstVisibleIndex + TARGET_CELL_INDEX;
+            
+            if (direction === 'left') {
+                if (firstVisibleIndex > 0) {
+                    tapeOffset += CELL_WIDTH;
+                }
+            } else if (direction === 'right') {
+                // 如果有截断，不能移动到截断位置或右侧
+                if (truncateIndex !== -1 && targetCellIndex >= truncateIndex) {
+                    return; // 无法向右移动
+                }
+                
+                const lastVisibleIndex = firstVisibleIndex + VISIBLE_CELLS - 1;
+                
+                if (lastVisibleIndex >= cells.length - 1) {
+                    expandTape('right');
+                }
+                
+                tapeOffset -= CELL_WIDTH;
+            }
+            
+            tape.style.left = `${tapeOffset}px`;
+            updateVisibleCells();
+            highlightTargetCell();
+            updateControlStates();
+            updatePositionIndicator(); // 更新位置指示器
+        }
+
+
+        // 跳转到指定格子位置
+        function jumpToCell(index) {
+            // 如果有截断且要跳转到截断位置或右侧，不允许
+            if (truncateIndex !== -1 && index >= truncateIndex) {
+                return;
+            }
+            
+            // 计算需要的偏移量，使目标格子位于指针位置(第五个可见格子)
+            tapeOffset = -(index - TARGET_CELL_INDEX) * CELL_WIDTH;
+            
+            // 确保偏移量不会让纸带显示到第一个格子之前
+            const minOffset = 0;
+            if (tapeOffset > minOffset) {
+                tapeOffset = minOffset;
+            }
+            
+            tape.style.left = `${tapeOffset}px`;
+            updateVisibleCells();
+            highlightTargetCell();
+            updateControlStates();
+            updatePositionIndicator(); // 更新位置指示器
+            
+            // 关闭代码查看器
+            toggleCodeViewer();
+        }
+
+
+        function toggleHole() {
+            const targetCell = currentVisibleCells[TARGET_CELL_INDEX];
+            // 不能在起始格子或截断格子上打孔
+            if (targetCell && !targetCell.classList.contains('starting') &&
+                !targetCell.classList.contains('truncated')) {
+                if (targetCell.classList.contains('hole')) {
+                    targetCell.classList.remove('hole');
+                    targetCell.classList.add('highlighted');
+                } else {
+                    targetCell.classList.add('hole');
+                    targetCell.classList.remove('highlighted');
+                }
+                updateControlStates();
+                updateCodeViewer(); // 更新代码查看器
+                updateBinaryViewer(); // 更新二进制查看器
+            }
+        }
+
+
+        // 切换截断状态
+        function toggleTruncate() {
+            const startIndex = Math.max(0, Math.floor(-tapeOffset / CELL_WIDTH));
+            const targetCellIndex = startIndex + TARGET_CELL_INDEX;
+            const targetCell = cells[targetCellIndex];
+            
+            // 不能在起始格子上设置截断
+            if (targetCell.classList.contains('starting')) {
+                return;
+            }
+            
+            // 如果当前有截断，先清除所有截断状态
+            if (truncateIndex !== -1) {
+                cells.forEach((cell, index) => {
+                    cell.classList.remove('truncated');
+                    cell.classList.remove('truncated-behind');
+                    // 恢复原有的高亮状态
+                    if (index === truncateIndex) {
+                        highlightTargetCell();
+                    }
+                });
+                truncateIndex = -1;
+            } else {
+                // 设置新的截断
+                truncateIndex = targetCellIndex;
+                targetCell.classList.remove('highlighted');
+                targetCell.classList.remove('hole');
+                targetCell.classList.add('truncated');
+                
+                // 将截断位置后面的所有格子设为灰色
+                for (let i = targetCellIndex + 1; i < cells.length; i++) {
+                    cells[i].classList.add('truncated-behind');
+                }
+            }
+            
+            updateControlStates();
+            updateCodeViewer(); // 更新代码查看器
+            updateBinaryViewer(); // 更新二进制查看器
+        }
+
+
+        // 代码查看器相关函数
+        function toggleCodeViewer() {
+            const codeViewer = document.getElementById('code-viewer');
+            codeViewer.style.display = codeViewer.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+
+        function updateCodeViewer() {
+            const fullTapeContainer = document.getElementById('full-tape');
+            fullTapeContainer.innerHTML = ''; // 清空现有内容
+            
+            // 重新创建所有格子的缩略图，但排除红色起始格子
+            cells.forEach((cell, index) => {
+                // 跳过红色起始格子，不在完整纸带视图中显示
+                if (cell.classList.contains('starting')) {
+                    return;
+                }
+                
+                const codeCell = document.createElement('div');
+                codeCell.classList.add('code-cell');
+                
+                // 复制原始格子的状态
+                if (cell.classList.contains('truncated')) {
+                    codeCell.style.backgroundColor = '#ffd700'; // 截断处为金色/黄色
+                } else if (cell.classList.contains('truncated-behind')) {
+                    codeCell.style.backgroundColor = '#cccccc'; // 截断后面的格子为灰色
+                } else if (cell.classList.contains('hole')) {
+                    codeCell.style.backgroundColor = 'black'; // 已打孔
+                } else {
+                    codeCell.style.backgroundColor = 'white'; // 空白
+                }
+                
+                // 添加索引标签（注意：这里索引从1开始计数）
+                codeCell.title = `位置 ${getEffectivePosition(index) + 1}，点击跳转`;
+                
+                // 添加点击事件，跳转到该格子
+                codeCell.addEventListener('click', () => jumpToCell(index));
+                
+                fullTapeContainer.appendChild(codeCell);
+            });
+        }
+
+
+        // 获取格子的有效位置（忽略红色格子）
+        function getEffectivePosition(index) {
+            let effectivePosition = 0;
+            for (let i = 0; i < index; i++) {
+                if (!cells[i].classList.contains('starting')) {
+                    effectivePosition++;
+                }
+            }
+            return effectivePosition;
+        }
+
+
+        // 二进制查看器相关函数
+        function toggleBinaryViewer() {
+            const binaryViewer = document.getElementById('binary-viewer');
+            binaryViewer.style.display = binaryViewer.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+
+        function updateBinaryViewer() {
+            // 使用新添加的函数获取二进制数据
+            const binaryString = getTapeBinary();
+            
+            const binaryContent = document.getElementById('binary-content');
+            binaryContent.innerHTML = ''; // 清空现有内容
+            
+            if (binaryString === '') {
+                binaryContent.innerHTML = '<p>没有可显示的二进制数据（所有格子都是红色起始格子或已被截断）</p>';
+            } else {
+                binaryContent.textContent = binaryString;
+            }
+        }
+
+
+        // 插件系统相关函数
+        function togglePluginViewer() {
+            const pluginViewer = document.getElementById('plugin-viewer');
+            pluginViewer.style.display = pluginViewer.style.display === 'flex' ? 'none' : 'flex';
+            // 隐藏添加插件表单
+            document.getElementById('add-plugin-form').classList.remove('visible');
+        }
+
+        // 初始化插件系统
+        function initializePlugins() {
+            // 从localStorage加载插件
+            const savedPlugins = localStorage.getItem('papercode_plugins');
+            if (savedPlugins) {
+                try {
+                    plugins = JSON.parse(savedPlugins);
+                    // 运行所有已安装的插件
+                    plugins.forEach(plugin => runPlugin(plugin.code));
+                } catch (e) {
+                    console.error('加载插件失败:', e);
+                    plugins = [];
+                }
+            }
+            updatePluginList();
+        }
+
+        // 更新插件列表显示
+        function updatePluginList() {
+            const pluginList = document.getElementById('plugin-list');
+            const noPluginsMessage = document.getElementById('no-plugins-message');
+            
+            pluginList.innerHTML = '';
+            
+            if (plugins.length === 0) {
+                // 没有插件时显示提示信息
+                noPluginsMessage.style.display = 'block';
+                return;
+            }
+            
+            // 有插件时隐藏提示信息
+            noPluginsMessage.style.display = 'none';
+            
+            plugins.forEach((plugin, index) => {
+                const manifest = plugin.manifest;
+                const pluginItem = document.createElement('div');
+                pluginItem.className = 'plugin-item';
+                
+                const header = document.createElement('div');
+                header.className = 'plugin-header';
+                
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'plugin-name';
+                nameDiv.textContent = manifest.name;
+                
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'plugin-actions';
+                
+                const deleteButton = document.createElement('button');
+                deleteButton.className = 'plugin-action-button delete-button';
+                deleteButton.textContent = '删除';
+                deleteButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deletePlugin(index);
+                    location.reload()
+                });
+                
+                actionsDiv.appendChild(deleteButton);
+                header.appendChild(nameDiv);
+                header.appendChild(actionsDiv);
+                
+                const packnameDiv = document.createElement('div');
+                packnameDiv.className = 'plugin-packname';
+                packnameDiv.textContent = manifest.packname;
+                
+                const descriptionDiv = document.createElement('div');
+                descriptionDiv.className = 'plugin-description';
+                descriptionDiv.textContent = manifest.description || '无描述';
+                
+                const detailsDiv = document.createElement('div');
+                detailsDiv.className = 'plugin-details';
+                
+                // 添加依赖信息
+                if (manifest.lib && manifest.lib.length > 0) {
+                    const libSection = document.createElement('div');
+                    libSection.className = 'plugin-section';
+                    
+                    const libTitle = document.createElement('div');
+                    libTitle.className = 'plugin-section-title';
+                    libTitle.textContent = '依赖插件:';
+                    
+                    const libContent = document.createElement('div');
+                    libContent.className = 'plugin-section-content';
+                    libContent.textContent = manifest.lib.join(', ');
+                    
+                    libSection.appendChild(libTitle);
+                    libSection.appendChild(libContent);
+                    detailsDiv.appendChild(libSection);
+                }
+                
+                // 添加不兼容信息
+                if (manifest.incompatible && manifest.incompatible.length > 0) {
+                    const incompatibleSection = document.createElement('div');
+                    incompatibleSection.className = 'plugin-section';
+                    
+                    const incompatibleTitle = document.createElement('div');
+                    incompatibleTitle.className = 'plugin-section-title';
+                    incompatibleTitle.textContent = '不兼容插件:';
+                    
+                    const incompatibleContent = document.createElement('div');
+                    incompatibleContent.className = 'plugin-section-content';
+                    incompatibleContent.textContent = manifest.incompatible.join(', ');
+                    
+                    incompatibleSection.appendChild(incompatibleTitle);
+                    incompatibleSection.appendChild(incompatibleContent);
+                    detailsDiv.appendChild(incompatibleSection);
+                }
+
+                // 添加查看源代码按钮
+                const viewSourceButton = document.createElement('button');
+                viewSourceButton.className = 'view-source-button';
+                viewSourceButton.textContent = '查看源代码';
+                viewSourceButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const sourceCodeElement = pluginItem.querySelector('.plugin-source-code');
+                    sourceCodeElement.classList.toggle('visible');
+                    viewSourceButton.textContent = sourceCodeElement.classList.contains('visible') 
+                        ? '隐藏源代码' 
+                        : '查看源代码';
+                });
+                detailsDiv.appendChild(viewSourceButton);
+
+                // 添加源代码显示区域
+                const sourceCodeElement = document.createElement('div');
+                sourceCodeElement.className = 'plugin-source-code';
+                // 显示包含manifest的完整源代码
+                sourceCodeElement.textContent = plugin.fullCode || '无源代码';
+                detailsDiv.appendChild(sourceCodeElement);
+                
+                pluginItem.appendChild(header);
+                pluginItem.appendChild(packnameDiv);
+                pluginItem.appendChild(descriptionDiv);
+                pluginItem.appendChild(detailsDiv);
+                
+                // 点击显示/隐藏详情 - 修改事件处理逻辑
+                pluginItem.addEventListener('click', (e) => {
+                    // 检查点击目标是否是代码块或其内部元素
+                    if (!e.target.closest('.plugin-source-code')) {
+                        detailsDiv.classList.toggle('visible');
+                    }
+                });
+                
+                pluginList.appendChild(pluginItem);
+            });
+        }
+
+        // 解析插件代码，提取manifest
+        function parsePluginCode(code) {
+            try {
+                // 保存完整代码（包含manifest）
+                const fullCode = code;
+                
+                // 尝试提取manifest部分
+                const manifestMatch = code.match(/"manifest"\s*:\s*\{([\s\S]*?)\}/);
+                if (!manifestMatch) {
+                    return { error: '插件代码中未找到manifest' };
+                }
+                
+                // 尝试解析manifest
+                const manifestStr = `{${manifestMatch[1]}}`;
+                const manifest = JSON.parse(manifestStr);
+                
+                // 验证必要字段
+                if (!manifest.name || !manifest.packname) {
+                    return { error: 'manifest中缺少name或packname' };
+                }
+                
+                // 验证packname格式 (至少三部分)
+                const packnameParts = manifest.packname.split('.');
+                if (packnameParts.length < 3) {
+                    return { error: 'packname格式不正确，至少需要三部分(xxx.xxx.xxx)' };
+                }
+                
+                // 提取纯代码部分（去除manifest）
+                const codeWithoutManifest = code.replace(/"manifest"\s*:\s*\{[\s\S]*?\}/, '');
+                
+                return {
+                    manifest: manifest,
+                    code: codeWithoutManifest,
+                    fullCode: fullCode  // 返回包含manifest的完整代码
+                };
+            } catch (e) {
+                return { error: `解析插件失败: ${e.message}` };
+            }
+        }
+
+        // 检查插件依赖
+        function checkPluginDependencies(manifest) {
+            if (!manifest.lib || manifest.lib.length === 0) {
+                return { valid: true };
+            }
+            
+            const missingDeps = [];
+            manifest.lib.forEach(depPackname => {
+                const found = plugins.some(plugin => plugin.manifest.packname === depPackname);
+                if (!found) {
+                    missingDeps.push(depPackname);
+                }
+            });
+            
+            if (missingDeps.length > 0) {
+                return {
+                    valid: false,
+                    missing: missingDeps
+                };
+            }
+            
+            return { valid: true };
+        }
+
+        // 检查插件兼容性
+        function checkPluginCompatibility(manifest) {
+            // 检查是否与已安装插件不兼容
+            if (manifest.incompatible && manifest.incompatible.length > 0) {
+                for (const incompatiblePackname of manifest.incompatible) {
+                    const found = plugins.some(plugin => plugin.manifest.packname === incompatiblePackname);
+                    if (found) {
+                        return {
+                            valid: false,
+                            reason: `与已安装的插件冲突: ${incompatiblePackname}`
+                        };
+                    }
+                }
+            }
+            
+            // 检查已安装插件是否与当前插件不兼容
+            for (const installedPlugin of plugins) {
+                if (installedPlugin.manifest.incompatible && 
+                    installedPlugin.manifest.incompatible.includes(manifest.packname)) {
+                    return {
+                        valid: false,
+                        reason: `已安装的插件 ${installedPlugin.manifest.name} 与当前插件冲突`
+                    };
+                }
+            }
+            
+            return { valid: true };
+        }
+
+        // 检查插件是否已安装
+        function isPluginInstalled(packname) {
+            return plugins.some(plugin => plugin.manifest.packname === packname);
+        }
+
+        // 安装插件
+        function installPlugin(code) {
+            const result = parsePluginCode(code);
+            
+            if (result.error) {
+                showError('plugin-code-error', result.error);
+                return false;
+            }
+            
+            const { manifest, code: pluginCode, fullCode } = result;
+            
+            // 检查是否已安装
+            if (isPluginInstalled(manifest.packname)) {
+                showError('plugin-code-error', `已安装同名插件: ${manifest.packname}`);
+                return false;
+            }
+            
+            // 检查依赖
+            const depCheck = checkPluginDependencies(manifest);
+            if (!depCheck.valid) {
+                showError('plugin-code-error', `缺少依赖插件: ${depCheck.missing.join(', ')}`);
+                return false;
+            }
+            
+            // 检查兼容性
+            const compatCheck = checkPluginCompatibility(manifest);
+            if (!compatCheck.valid) {
+                showError('plugin-code-error', compatCheck.reason);
+                return false;
+            }
+            
+            // 运行插件
+            try {
+                runPlugin(pluginCode);
+            } catch (e) {
+                showError('plugin-code-error', `插件运行出错: ${e.message}`);
+                return false;
+            }
+            
+            // 添加到插件列表
+            plugins.push({
+                manifest: manifest,
+                code: pluginCode,
+                fullCode: fullCode  // 保存包含manifest的完整代码
+            });
+            
+            // 保存到localStorage
+            savePlugins();
+            
+            // 更新插件列表
+            updatePluginList();
+            
+            // 隐藏添加插件表单
+            document.getElementById('add-plugin-form').classList.remove('visible');
+            // 清空输入
+            document.getElementById('plugin-code').value = '';
+            
+            return true;
+        }
+
+        // 运行插件代码
+        function runPlugin(code) {
+            // 创建一个沙箱环境运行插件代码
+            const pluginFunction = new Function(code);
+            pluginFunction();
+        }
+
+        // 从文件安装插件
+        function installPluginFromFile(file) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const code = e.target.result;
+                    const success = installPlugin(code);
+                    if (success) {
+                        // 重置文件输入
+                        document.getElementById('plugin-file').value = '';
+                    }
+                } catch (e) {
+                    showError('plugin-file-error', `文件读取错误: ${e.message}`);
+                }
+            };
+            
+            reader.onerror = function() {
+                showError('plugin-file-error', '文件读取失败');
+            };
+            
+            reader.readAsText(file);
+        }
+
+        // 删除插件
+        function deletePlugin(index) {
+            if (confirm('确定要删除这个插件吗？')) {
+                plugins.splice(index, 1);
+                savePlugins();
+                updatePluginList();
+            }
+        }
+
+        // 保存插件到localStorage
+        function savePlugins() {
+            localStorage.setItem('papercode_plugins', JSON.stringify(plugins));
+        }
+
+        // 显示错误信息
+        function showError(elementId, message) {
+            const errorElement = document.getElementById(elementId);
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            
+            // 3秒后隐藏错误信息
+            setTimeout(() => {
+                errorElement.textContent = '';
+                errorElement.style.display = 'none';
+            }, 3000);
+        }
+
+        // 关闭所有查看器窗口
+        function closeAllViewers() {
+            document.getElementById('code-viewer').style.display = 'none';
+            document.getElementById('binary-viewer').style.display = 'none';
+            document.getElementById('plugin-viewer').style.display = 'none';
+            // 隐藏添加插件表单
+            document.getElementById('add-plugin-form').classList.remove('visible');
+        }
+
+        // 键盘事件处理
+        document.addEventListener('keydown', (event) => {
+            // 如果快捷键被禁用，则不处理任何快捷键
+            if (!shortcutsEnabled) {
+                return;
+            }
+            
+            if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') {
+                moveTape('left');
+            } else if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') {
+                moveTape('right');
+            } else if (event.key === ' ') {
+                toggleHole();
+            } else if (event.key.toLowerCase() === 'c') {
+                // 按C键打开/关闭代码查看器
+                toggleCodeViewer();
+            } else if (event.key.toLowerCase() === 'b') {
+                // 按B键打开/关闭二进制查看器
+                toggleBinaryViewer();
+            } else if (event.key.toLowerCase() === 't') {
+                // 按T键切换截断状态
+                toggleTruncate();
+            } else if (event.key.toLowerCase() === 'p') {
+                // 按P键打开/关闭插件管理界面
+                togglePluginViewer();
+            } else if (event.key === 'Escape') {
+                // 按Esc键关闭所有查看器窗口
+                closeAllViewers();
+            } else if (event.key.toLowerCase() === 'p') {
+                // 按P键获取二进制数据（调试用）
+                console.log('当前纸带二进制数据:', getTapeBinary());
+                console.log('带元数据的二进制信息:', getTapeBinary(true));
+            }
+        });
+
+
+        // 初始化插件系统事件监听
+        document.addEventListener('DOMContentLoaded', () => {
+            // 为输入框添加焦点和失焦事件监听器
+            const pluginCodeInput = document.getElementById('plugin-code');
+            pluginCodeInput.addEventListener('focus', () => {
+                shortcutsEnabled = false; // 输入框获得焦点时禁用快捷键
+            });
+            pluginCodeInput.addEventListener('blur', () => {
+                shortcutsEnabled = true; // 输入框失去焦点时启用快捷键
+            });
+            
+            // 拼图按钮点击事件 - 打开插件管理界面
+            document.getElementById('puzzle-button').addEventListener('click', togglePluginViewer);
+            
+            // 添加插件按钮点击事件 - 只有点击这个按钮才显示安装界面
+            document.getElementById('add-plugin-button').addEventListener('click', () => {
+                document.getElementById('add-plugin-form').classList.add('visible');
+            });
+            
+            // 取消添加插件
+            document.getElementById('cancel-add-plugin').addEventListener('click', () => {
+                document.getElementById('add-plugin-form').classList.remove('visible');
+                // 清空错误信息
+                document.getElementById('plugin-code-error').textContent = '';
+                document.getElementById('plugin-file-error').textContent = '';
+            });
+            
+            // 安装插件按钮点击事件
+            document.getElementById('install-plugin').addEventListener('click', () => {
+                const activeMethod = document.querySelector('.install-method.active').dataset.method;
+                
+                if (activeMethod === 'text') {
+                    const code = document.getElementById('plugin-code').value.trim();
+                    if (!code) {
+                        showError('plugin-code-error', '请输入插件代码');
+                        return;
+                    }
+                    installPlugin(code);
+                } else if (activeMethod === 'file') {
+                    const fileInput = document.getElementById('plugin-file');
+                    if (!fileInput.files || fileInput.files.length === 0) {
+                        showError('plugin-file-error', '请选择一个JS文件');
+                        return;
+                    }
+                    installPluginFromFile(fileInput.files[0]);
+                }
+            });
+            
+            // 安装方式切换
+            const installMethods = document.querySelectorAll('.install-method');
+            installMethods.forEach(method => {
+                method.addEventListener('click', () => {
+                    // 移除所有active类
+                    installMethods.forEach(m => m.classList.remove('active'));
+                    document.querySelectorAll('.install-content').forEach(c => c.classList.remove('active'));
+                    
+                    // 给当前点击的添加active类
+                    method.classList.add('active');
+                    const methodName = method.dataset.method;
+                    document.getElementById(`${methodName}-install`).classList.add('active');
+                    
+                    // 清空错误信息
+                    document.getElementById('plugin-code-error').textContent = '';
+                    document.getElementById('plugin-file-error').textContent = '';
+                });
+            });
+            
+            // 文件选择变化事件
+            document.getElementById('plugin-file').addEventListener('change', function() {
+                if (this.files && this.files.length > 0) {
+                    document.getElementById('plugin-file-error').textContent = '';
+                }
+            });
+            
+            // 初始化纸带和插件系统
+            initializeTape();
+            initializePlugins();
+        });
+    </script>
+</body>
+</html>
